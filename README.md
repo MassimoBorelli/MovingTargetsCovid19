@@ -5,9 +5,9 @@ The dataset collects 527 observation of  27 variables, separated by semicolons:
  $ wave       : chr  "a" "b" "c" "d" 
  $ wavecd     : chr  "a" "b" "cd" 
  $ wavebcd    : chr  "a" "bcd"
- $ age        : numeric
+ $ age        : numeric, from 17.0 to 100.0
  $ sex        : chr  "female" "male"
- $ los        : integer
+ $ los        : integer, from 1 to 78
  $ death      : int  0 1 
  $ who        : chr  "moderate" "severe"
  $ dyspnea    : int  0 1 
