@@ -1,7 +1,11 @@
 Covid patients admitted to Catanzaro (Italy) hospitals from March 2020 to June 2022.
 
+
 The dataset collects 527 observation of  27 variables, separated by semicolons:
+
+
  $ idpatient  : chr  "p001" "p002" "p003" "p004" ... "p527"
+ 
  $ wave       : chr  "a" "b" "c" "d" 
  $ wavecd     : chr  "a" "b" "cd" 
  $ wavebcd    : chr  "a" "bcd"
