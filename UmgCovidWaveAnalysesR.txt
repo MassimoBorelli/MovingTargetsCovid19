@@ -1,0 +1,203 @@
+
+
+
+library(survival)
+urlgithub = "https://raw.githubusercontent.com/MassimoBorelli/UmgCovidWave/main/UmgCovidWave.csv"
+UmgCovidWave = read.csv(urlgithub, header = TRUE, sep = ";")
+str(UmgCovidWave)
+attach(UmgCovidWave)
+names(UmgCovidWave)
+wave = factor(wave)
+wavecd = factor(wavecd)
+wavebcd = factor(wavebcd)
+sex = factor(sex) 
+who = factor(who)
+
+# summary(age)
+
+
+
+tablewavedeath = table(wave, death)
+tablewavedeath
+apply(tablewavedeath, MARGIN = 1, FUN = sum)
+proportions(tablewavedeath, margin = 1)
+prop.test(tablewavedeath, correct = TRUE)
+
+
+
+
+###  figure Rplot.treegraph.pdf
+
+library(party)  # citation("party")  # citation()
+
+explorelation = death ~ wave + wavecd + wavebcd + age + sex + who + dyspnea + oncology + htn + cvdnothtn + neuro + stroke + dm + cpulmonary + copd + asthma + ckd + obesity + statin + diuretics + prophylaxis + steroids + remdesivir + vaccine
+treegraph = ctree(explorelation)
+plot(treegraph, main = "exploratory conditional regression tree: deceased vs. all dataset covariates")
+treegraph
+
+
+###  figure Rplot.jittertreegraph.pdf
+### we add a small noise to the 0/1 mortality indicator in order to better depict boxplots in conditional tree graph
+### clearly, jitter slightly affects p-values reported
+
+set.seed(1234)
+noise = runif(length(death))/30
+jitterdeath = 0.5 + (-1)^(1-death) * 0.5 + (-1)^(death) * noise
+explorelation = jitterdeath ~ wave + wavecd + wavebcd + age + sex + who + dyspnea + oncology + htn + cvdnothtn + neuro + stroke + dm + cpulmonary + copd + asthma + ckd + obesity + statin + diuretics + prophylaxis + steroids + remdesivir + vaccine
+treegraph = ctree(explorelation)
+plot(treegraph, main = "exploratory conditional regression tree: deceased vs. all dataset covariates")
+treegraph
+
+
+### ### ### ### ### ### ### ### 
+### Node number 1: who
+### ### ### ### ### ### ### ### 
+
+tablewhodeath = table(who, death)
+tablewhodeath
+apply(tablewhodeath, MARGIN = 1, FUN = sum)
+proportions(tablewhodeath, margin = 1)
+fisher.test(tablewhodeath)
+
+
+
+## survival in different who classes
+
+(km = survfit(Surv(los, death) ~ who ))
+summary(km)
+(logranktest = survdiff(Surv(los, death) ~ who , rho = 0))
+summary(los[who == "moderate"])
+summary(los[who == "severe"])
+
+
+plot(km, col = c("khaki", "sandybrown"),
+     main = "survival vs. W.H.O.", mark.time = TRUE,
+     lwd = c(3,2))
+# text(23, 0.35, "Who (p < 0.001)")
+legend(median(los), 0.3, c("moderate", "severe"), col = c("khaki", "sandybrown"),lwd = c(3,2))
+
+
+##  https://bioconnector.github.io/workshops/r-survival.html
+
+library(survminer)
+ggsurvplot(km, conf.int=TRUE, pval=TRUE, risk.table=TRUE, 
+           legend.labs=c("Moderate", "Severe"), legend.title="W.H.O.",  
+           palette=c("khaki", "sandybrown"), 
+           title="Kaplan-Meier Curve for UmgCovidWave Survival", 
+           risk.table.height=.15, data = UmgCovidWave)
+
+
+
+
+
+
+
+
+### ### ### ### ### ### ### ### 
+### Node number 2: age in severe
+### ### ### ### ### ### ### ### 
+
+
+
+ageYoungOld = factor(age > 69)
+levels(ageYoungOld)[2] = "Senior"
+levels(ageYoungOld)[1] = "Junior"
+levels(ageYoungOld)
+
+
+tablesevereagedeath = table(ageYoungOld[who == "severe"], death[who == "severe"])
+tablesevereagedeath
+apply(tablesevereagedeath, MARGIN = 1, FUN = sum)
+proportions(tablesevereagedeath, margin = 1)
+fisher.test(tablesevereagedeath)
+
+
+
+km1 = survfit(Surv(los[who == "severe"], as.numeric(death[who == "severe"])) ~ ageYoungOld[who == "severe"] )
+km1
+(logranktest = survdiff(Surv(los[who == "severe"], as.numeric(death[who == "severe"])) ~ ageYoungOld[who == "severe"], rho = 0))
+summary(los[who == "severe" & ageYoungOld == "Junior"])
+summary(los[who == "severe"& ageYoungOld == "Senior"])
+
+
+
+plot(km1, main = " Who = 1 | Survival vs Junior/Senior",
+     col = c("chocolate2", "chocolate4"), mark.time = TRUE,
+     lwd = c(3,2))
+text(30, 0.1, "who = 1; age <= 69 vs. age > 69 (p < 0.001)")
+legend(50, 0.6, levels(factor(ageYoungOld)), 
+       col = c("chocolate2", "chocolate4"),lwd = c(3,2))
+
+
+
+### ### ### ### ### ### ### ### 
+### Node number 5: wave in moderate
+### ### ### ### ### ### ### ### 
+
+# apply(tablewhodeath, MARGIN = 1, FUN = sum) # 344
+
+
+
+tablemoderatewaveAdeath = table(wavebcd[who == "moderate"], death[who == "moderate"])
+tablemoderatewaveAdeath
+apply(tablemoderatewaveAdeath, MARGIN = 1, FUN = sum)
+proportions(tablemoderatewaveAdeath, margin = 1)
+fisher.test(tablemoderatewaveAdeath)
+
+
+
+
+km1 = survfit(Surv(los[who == "moderate"], as.numeric(death[who == "moderate"])) ~ wavebcd[who == "moderate"] )
+km1
+(logranktest = survdiff(Surv(los[who == "moderate"], as.numeric(death[who == "moderate"])) ~ wavebcd[who == "moderate"], rho = 0))
+summary(los[who == "moderate" & wavebcd == "a"])
+summary(los[who == "moderate"& wavebcd == "bcd"])
+
+
+
+
+### ### ### ### ### ### ### ### 
+### Node number 6: dyspnea in wave a in moderate
+### ### ### ### ### ### ### ### 
+
+
+
+tabledyspneamoderatewaveAdeath = table(dyspnea[who == "moderate" & wavebcd == "a"],
+                                death[who == "moderate" & wavebcd == "a"])
+tabledyspneamoderatewaveAdeath
+apply(tabledyspneamoderatewaveAdeath, MARGIN = 1, FUN = sum)
+proportions(tabledyspneamoderatewaveAdeath, margin = 1)
+fisher.test(tabledyspneamoderatewaveAdeath)
+
+
+
+km1 = survfit(Surv(los[who == "moderate" & wavebcd == "a"], as.numeric(death[who == "moderate" & wavebcd == "a"])) ~ dyspnea[who == "moderate" & wavebcd == "a"] )
+km1
+(logranktest = survdiff(Surv(los[who == "moderate" & wavebcd == "a"], as.numeric(death[who == "moderate" & wavebcd == "a"])) ~ dyspnea[who == "moderate" & wavebcd == "a"] , rho = 0))
+summary(los[who == "moderate" & wavebcd == "a" & dyspnea == 1])
+summary(los[who == "moderate" & wavebcd == "a" & dyspnea == 0])
+
+
+### ### ### ### ### ### ### ### 
+### Node number 9: ckd in wave bcd in moderate
+### ### ### ### ### ### ### ### 
+
+
+
+tableckdmoderatewaveBCDdeath = table(ckd[who == "moderate" & wavebcd == "bcd"],
+                                       death[who == "moderate" & wavebcd == "bcd"])
+tableckdmoderatewaveBCDdeath
+apply(tableckdmoderatewaveBCDdeath, MARGIN = 1, FUN = sum)
+proportions(tableckdmoderatewaveBCDdeath, margin = 1)
+fisher.test(tableckdmoderatewaveBCDdeath)
+
+
+
+
+km1 = survfit(Surv(los[who == "moderate" & wavebcd == "bcd"], as.numeric(death[who == "moderate" & wavebcd == "bcd"])) ~ ckd[who == "moderate" & wavebcd == "bcd"] )
+km1
+(logranktest = survdiff(Surv(los[who == "moderate" & wavebcd == "bcd"], as.numeric(death[who == "moderate" & wavebcd == "bcd"])) ~ ckd[who == "moderate" & wavebcd == "bcd"] , rho = 0))
+summary(los[who == "moderate" & wavebcd == "bcd" & ckd == 1])
+summary(los[who == "moderate" & wavebcd == "bcd" & ckd == 0])
+
+
